@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Code Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- Monaco Editor CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="toolbar">
+            <div class="logo">
+                <i class="fa-solid fa-code"></i>
+                <span>Web Code Editor</span>
+            </div>
+            <div class="toolbar-actions">
+                <button id="new-file-btn" title="新規ファイル">
+                    <i class="fa-regular fa-file"></i>
+                </button>
+                <button id="save-btn" title="保存">
+                    <i class="fa-regular fa-floppy-disk"></i>
+                </button>
+                <button id="upload-btn" title="アップロードファイル">
+                    <i class="fa-solid fa-upload"></i>
+                </button>
+                <button id="upload-btn-folder" title="アップロードファイル">
+                    <i class="fa-solid fa-upload"></i>
+                </button>
+                <button id="download-btn" title="ダウンロード">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <button id="settings-btn" title="設定">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+            <div class="toolbar-options">
+                <select id="font-size">
+                    <option value="12">12px</option>
+                    <option value="14" selected>14px</option>
+                    <option value="16">16px</option>
+                    <option value="18">18px</option>
+                    <option value="20">20px</option>
+                </select>
+                <button id="fullscreen-btn" title="全画面">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <!-- 左サイドパネル: ファイルエクスプローラー -->
+            <div class="panel file-explorer">
+                <div class="panel-header">
+                    <h3>ファイルエクスプローラー</h3>
+                    <div class="panel-actions">
+                        <button id="collapse-explorer" class="panel-toggle" title="パネル折りたたみ">
+                            <i class="fa-solid fa-angles-left"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="explorer-actions">
+                        <button id="add-file" title="ファイル追加">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                        </button>
+                        <button id="add-folder" title="フォルダ追加">
+                            <i class="fa-solid fa-folder-plus"></i>
+                        </button>
+                        <button id="upload-file" title="ファイルアップロード">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                        </button>
+                        <button id="upload-folder" title="フォルダアップロード">
+                            <i class="fa-solid fa-folder-arrow-up"></i>
+                        </button>
+                    </div>
+                    <div id="file-tree" class="file-tree">
+                        <!-- ファイルツリーが動的に生成される場所 -->
+                    </div>
+                </div>
+                <div class="resize-handle horizontal-handle"></div>
+            </div>
+
+            <!-- 中央パネル: コードエディター -->
+            <div class="panel editor-panel">
+                <div class="panel-header tabs-container">
+                    <div class="editor-tabs" id="editor-tabs">
+                        <!-- タブが動的に生成される場所 -->
+                    </div>
+                    <div class="panel-actions">
+                        <button id="add-tab" title="新規タブ">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div id="editor-container" class="editor-container"></div>
+                </div>
+                <div class="resize-handle vertical-handle"></div>
+            </div>
+
+            <!-- 右サイドパネル: プレビュー -->
+<div class="panel preview-panel">
+    <div class="panel-header">
+        <h3 id="preview-title">プレビュー</h3>
+        <div class="panel-actions">
+            <button id="toggle-preview" title="プレビュー自動更新" class="toggle-btn active">
+                <i class="fa-solid fa-eye"></i>
+            </button>
+            <select id="preview-size">
+                <option value="responsive">レスポンシブ</option>
+                <option value="mobile">モバイル (375px)</option>
+                <option value="tablet">タブレット (768px)</option>
+                <option value="desktop">デスクトップ (1200px)</option>
+            </select>
+            <button id="detach-preview" title="ポップアップ">
+                <i class="fa-solid fa-external-link"></i>
+            </button>
+            <button id="refresh-preview" title="更新">
+                <i class="fa-solid fa-rotate"></i>
+            </button>
+            <button id="collapse-preview" class="panel-toggle" title="パネル折りたたみ">
+                <i class="fa-solid fa-angles-right"></i>
+            </button>
+        </div>
+    </div>
+    <div class="panel-content">
+        <iframe id="preview-iframe" class="preview-iframe"></iframe>
+    </div>
+    <div class="resize-handle horizontal-handle"></div>
+</div>
+        </main>
+
+        <!-- 下部パネル: コンソール -->
+        <div class="panel console-panel">
+            <div class="panel-header">
+                <h3>コンソール</h3>
+                <div class="panel-actions">
+                    <button id="clear-console" title="コンソールクリア">
+                        <i class="fa-solid fa-broom"></i>
+                    </button>
+                    <button id="collapse-console" class="panel-toggle" title="パネル折りたたみ">
+                        <i class="fa-solid fa-angles-down"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="console-output" class="console-output"></div>
+            </div>
+            <div class="resize-handle vertical-handle"></div>
+        </div>
+    </div>
+
+    <!-- モーダルダイアログ -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">タイトル</h3>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- モーダル内容が動的に生成される場所 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>あ
