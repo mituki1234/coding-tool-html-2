@@ -1498,36 +1498,122 @@ function initDetachablePreview() {
         // 現在のファイル内容を保存
         saveCurrentFile();
         
-        if (!previewWindow || previewWindow.closed) {
-            // プレビューウィンドウを開く
-            previewWindow = window.open('', 'preview', 'width=800,height=600');
-            
-            // HTMLを処理してCSSとJSを含めたものをウィンドウに描画
-            const htmlContent = projectState.files['index.html'] ? projectState.files['index.html'].content : '';
-            const processedHTML = processHTML(htmlContent);
-            
-            previewWindow.document.open();
-            previewWindow.document.write(processedHTML);
-            previewWindow.document.close();
-            
-            // エディタ更新時にプレビューも更新
-            if (editor) {
-                editor.onDidChangeModelContent(() => {
-                    // 現在のファイルを保存
-                    saveCurrentFile();
-                    
-                    // プレビューを更新
-                    if (previewWindow && !previewWindow.closed) {
-                        const newProcessedHTML = processHTML(projectState.files['index.html'].content);
-                        previewWindow.document.open();
-                        previewWindow.document.write(newProcessedHTML);
-                        previewWindow.document.close();
-                    }
-                });
-            }
+        // 現在プレビュー中のHTMLファイルを特定
+        let htmlFileToPreview = null;
+        const activeFile = projectState.activeFile;
+        
+        // HTMLファイルを特定する（updatePreview関数と同じロジック）
+        if (activeFile && activeFile.toLowerCase().endsWith('.html')) {
+            // アクティブファイルがHTMLなら直接それを使用
+            htmlFileToPreview = activeFile;
         } else {
-            // 既存のウィンドウにフォーカス
-            previewWindow.focus();
+            // 最後に開いたHTMLファイルを使用（あれば）
+            htmlFileToPreview = projectState.lastHtmlFile;
+            
+            if (!htmlFileToPreview && activeFile) {
+                // 同じディレクトリにHTMLがあれば使用
+                const dir = activeFile.substring(0, activeFile.lastIndexOf('/') + 1);
+                
+                for (const filename in projectState.files) {
+                    if (filename.toLowerCase().endsWith('.html') && filename.startsWith(dir)) {
+                        htmlFileToPreview = filename;
+                        break;
+                    }
+                }
+            }
+            
+            // それでもなければindex.htmlを探す
+            if (!htmlFileToPreview) {
+                if (projectState.files['root/index.html']) {
+                    htmlFileToPreview = 'root/index.html';
+                } else {
+                    // プロジェクト内の任意のHTMLファイルを探す
+                    for (const filename in projectState.files) {
+                        if (filename.toLowerCase().endsWith('.html')) {
+                            htmlFileToPreview = filename;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // HTMLが見つからなかった場合はメッセージを表示
+        if (!htmlFileToPreview || !projectState.files[htmlFileToPreview]) {
+            addConsoleMessage('プレビューするHTMLファイルが見つかりません', 'error');
+            return;
+        }
+        
+        try {
+            // 新しいウィンドウを開くか、既存のウィンドウにフォーカス
+            if (!previewWindow || previewWindow.closed) {
+                // プレビューウィンドウを開く
+                previewWindow = window.open('', 'webCodeEditorPreview', 'width=800,height=600');
+                
+                // HTMLを処理してCSSとJSを含めたものを作成
+                const htmlContent = projectState.files[htmlFileToPreview].content;
+                const processedHTML = processHTML(htmlContent, htmlFileToPreview);
+                
+                // 新しいウィンドウに書き込み
+                previewWindow.document.open();
+                previewWindow.document.write(processedHTML);
+                previewWindow.document.close();
+                
+                // ウィンドウにタイトルを設定
+                previewWindow.document.title = `プレビュー: ${htmlFileToPreview}`;
+                
+                // ウィンドウが閉じられたとき、変数をリセット
+                previewWindow.addEventListener('beforeunload', () => {
+                    previewWindow = null;
+                });
+                
+                // エディタ更新時にプレビューも更新する機能を追加
+                if (editor) {
+                    const updateHandler = editor.onDidChangeModelContent(() => {
+                        // ウィンドウが閉じられていたらリスナーを削除
+                        if (!previewWindow || previewWindow.closed) {
+                            updateHandler.dispose();
+                            return;
+                        }
+                        
+                        // 現在のファイルを保存
+                        saveCurrentFile();
+                        
+                        // 関連するHTMLファイルの内容を再取得
+                        const newHTML = projectState.files[htmlFileToPreview].content;
+                        const newProcessedHTML = processHTML(newHTML, htmlFileToPreview);
+                        
+                        // プレビューを更新
+                        try {
+                            previewWindow.document.open();
+                            previewWindow.document.write(newProcessedHTML);
+                            previewWindow.document.close();
+                        } catch (err) {
+                            console.error('プレビューウィンドウ更新中にエラーが発生しました:', err);
+                            addConsoleMessage('プレビューウィンドウの更新に失敗しました', 'error');
+                        }
+                    });
+                }
+                
+                // 成功メッセージ
+                addConsoleMessage(`${htmlFileToPreview} を別ウィンドウでプレビュー中`, 'info');
+            } else {
+                // 既存のウィンドウにフォーカス
+                previewWindow.focus();
+                
+                // 既存のウィンドウのコンテンツを更新
+                const htmlContent = projectState.files[htmlFileToPreview].content;
+                const processedHTML = processHTML(htmlContent, htmlFileToPreview);
+                
+                previewWindow.document.open();
+                previewWindow.document.write(processedHTML);
+                previewWindow.document.close();
+                
+                addConsoleMessage('プレビューウィンドウを更新しました', 'info');
+            }
+        } catch (err) {
+            console.error('プレビューウィンドウ作成中にエラーが発生しました:', err);
+            addConsoleMessage('プレビューウィンドウの作成に失敗しました', 'error');
         }
     });
 }
